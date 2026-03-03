@@ -1,226 +1,237 @@
+// Issue #61 — Add agent profile page at /app/agents/[id]
+// Builder A — Build #76 — 2026-03-03
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://nullpriest.xyz';
-
-interface BuildLogEntry {
-  date: string;
+interface AgentBuild {
+  number: number;
+  timestamp: string;
   issue: string;
-  result: 'success' | 'failure' | 'skipped';
-  detail: string;
+  status: 'success' | 'failure' | 'skipped';
+  message?: string;
 }
 
-interface AgentDetail {
+interface Agent {
   id: string;
   name: string;
-  description: string;
-  capabilities: string[];
-  verified: boolean;
-  onChainAddress?: string;
-  tokensLaunched: number;
-  quorumsFormed: number;
-  successRate: number;
-  joinedAt: string;
-  role?: string;
-  schedule?: string;
-  totalBuilds?: number;
-  lastActive?: string;
-  buildLog?: BuildLogEntry[];
-  recentCommits?: { sha: string; message: string; date: string; url?: string }[];
-  openIssues?: { number: number; title: string; url?: string }[];
+  slug: string;
+  role: string;
+  status: 'active' | 'paused' | 'building';
+  builds?: number;
+  lastBuild?: string;
+  stack?: string[];
+  description?: string;
+  verified?: boolean;
+  buildLog?: AgentBuild[];
+  capabilities?: string[];
+  assignedIssues?: string[];
+  wallet?: string;
+  network?: string;
 }
 
+const STATUS_COLOR: Record<string, string> = {
+  active: '#00ff88',
+  building: '#ffcc00',
+  paused: '#555',
+};
+
+const BUILD_STATUS_COLOR: Record<string, string> = {
+  success: '#00ff88',
+  failure: '#ff4444',
+  skipped: '#555',
+};
+
 export default function AgentProfilePage() {
-  const params = useParams();
-  const id = params?.id as string;
-  const [agent, setAgent] = useState<AgentDetail | null>(null);
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+
+  const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'builds' | 'commits'>('overview');
 
   useEffect(() => {
     if (!id) return;
-    const controller = new AbortController();
     async function fetchAgent() {
       try {
-        setLoading(true);
-        setError(null);
-        const res = await fetch(`${API_BASE}/api/agents/${id}`, { signal: controller.signal });
-        if (res.status === 404) throw new Error('Agent not found');
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        setAgent(await res.json());
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
-        setError(err.message ?? 'Failed to load agent');
+        const res = await fetch(`/api/agents/${id}`, {
+          headers: { 'x-payment-tier': 'free' },
+        });
+        if (res.status === 404) {
+          setError('agent not found');
+          setLoading(false);
+          return;
+        }
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const data: Agent = await res.json();
+        setAgent(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'fetch failed');
       } finally {
         setLoading(false);
       }
     }
     fetchAgent();
-    return () => controller.abort();
   }, [id]);
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#080808] text-[#e8e8e8] flex flex-col items-center justify-center gap-4">
-        <div className="w-6 h-6 border-2 border-[#00ff88] border-t-transparent rounded-full animate-spin" />
-        <p className="text-[#555] font-mono text-sm">loading agent profile...</p>
+      <div style={{ padding: '40px', fontFamily: 'IBM Plex Mono, monospace', fontSize: '12px', color: '#555' }}>
+        loading agent profile...
       </div>
     );
   }
 
   if (error || !agent) {
     return (
-      <div className="min-h-screen bg-[#080808] text-[#e8e8e8] flex flex-col items-center justify-center gap-4">
-        <div className="text-[#ff4444] font-mono text-sm">{error ?? 'agent not found'}</div>
-        <Link href="/app/agents" className="mt-2 px-4 py-2 border border-[#2a2a2a] rounded text-sm text-[#b0b0b0] hover:border-[#00ff88] hover:text-[#00ff88] transition">back to registry</Link>
+      <div style={{ padding: '40px' }}>
+        <a href="/app/agents" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: '#555', textDecoration: 'none' }}>
+          ← agent registry
+        </a>
+        <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px', color: '#ff4444', marginTop: '24px' }}>
+          {error ?? 'agent not found'}
+        </p>
       </div>
     );
   }
 
-  const successColor = agent.successRate >= 80 ? 'text-[#00ff88]' : agent.successRate >= 50 ? 'text-[#ffcc00]' : 'text-[#ff4444]';
-
   return (
-    <div className="min-h-screen bg-[#080808] text-[#e8e8e8]">
-      <div className="border-b border-[#1e1e1e] bg-[#0d0d0d]/95 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 py-4">
-          <Link href="/app/agents" className="inline-flex items-center gap-2 text-sm text-[#b0b0b0] hover:text-[#00ff88] transition mb-4">
-            Back to Registry
-          </Link>
+    <div style={{ padding: '40px', maxWidth: '900px', margin: '0 auto' }}>
+      {/* Back nav */}
+      <a href="/app/agents" style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: '#555', textDecoration: 'none', display: 'block', marginBottom: '32px' }}>
+        ← agent registry
+      </a>
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '32px' }}>
+        <div>
+          <h1 style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '22px', fontWeight: 500, color: '#e8e8e8', margin: '0 0 4px 0' }}>
+            {agent.name}
+            {agent.verified && (
+              <span style={{ color: '#4488ff', marginLeft: '8px', fontSize: '13px' }}>✓ verified</span>
+            )}
+          </h1>
+          <p style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '12px', color: '#777', margin: 0 }}>
+            {agent.role}
+          </p>
         </div>
+        <span style={{
+          fontFamily: 'IBM Plex Mono, monospace',
+          fontSize: '11px',
+          color: STATUS_COLOR[agent.status] ?? '#555',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          padding: '4px 10px',
+          border: `1px solid ${STATUS_COLOR[agent.status] ?? '#333'}`,
+          borderRadius: '3px',
+        }}>
+          {agent.status}
+        </span>
       </div>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
-        <div className="bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg p-8 mb-6">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <h1 className="text-4xl font-bold">{agent.name}</h1>
-              {agent.verified && (
-                <span className="px-3 py-1 bg-[#00ff88]/10 border border-[#00ff88]/30 rounded text-[#00ff88] text-sm font-mono">
-                  verified
-                </span>
-              )}
-            </div>
-            <div className="text-right">
-              <div className={`text-4xl font-bold ${successColor}`}>{agent.successRate}%</div>
-              <div className="text-xs text-[#777] mt-1">success rate</div>
-            </div>
+      {/* Description */}
+      {agent.description && (
+        <p style={{ fontSize: '14px', color: '#b0b0b0', lineHeight: '1.6', marginBottom: '32px' }}>
+          {agent.description}
+        </p>
+      )}
+
+      {/* Stats row */}
+      <div style={{ display: 'flex', gap: '32px', marginBottom: '32px', paddingBottom: '24px', borderBottom: '1px solid #1e1e1e' }}>
+        {agent.builds != null && (
+          <div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '24px', fontWeight: 600, color: '#00ff88' }}>{agent.builds}</div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '10px', color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>builds</div>
           </div>
-
-          <p className="text-[#b0b0b0] text-lg leading-relaxed mb-6">{agent.description}</p>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4">
-              <div className="text-2xl font-semibold text-[#4488ff]">{agent.quorumsFormed}</div>
-              <div className="text-xs text-[#777] mt-1">quorums formed</div>
-            </div>
-            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4">
-              <div className="text-2xl font-semibold text-[#aa88ff]">{agent.tokensLaunched}</div>
-              <div className="text-xs text-[#777] mt-1">tokens launched</div>
-            </div>
-            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4">
-              <div className="text-2xl font-semibold text-[#00ff88]">{agent.totalBuilds ?? 0}</div>
-              <div className="text-xs text-[#777] mt-1">total builds</div>
-            </div>
-            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4">
-              <div className="text-sm font-semibold text-[#e8e8e8]">{agent.role ?? 'Agent'}</div>
-              <div className="text-xs text-[#777] mt-1">role</div>
-            </div>
+        )}
+        {agent.lastBuild && (
+          <div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px', color: '#e8e8e8', marginTop: '4px' }}>{agent.lastBuild}</div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '10px', color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>last build</div>
           </div>
+        )}
+        {agent.network && (
+          <div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '13px', color: '#4488ff', marginTop: '4px' }}>{agent.network}</div>
+            <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '10px', color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '2px' }}>network</div>
+          </div>
+        )}
+      </div>
 
-          {agent.schedule && (
-            <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded p-4 mb-6">
-              <div className="text-xs text-[#777] mb-1">Schedule</div>
-              <div className="font-mono text-sm text-[#00ff88]">{agent.schedule}</div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {agent.capabilities.map((cap) => (
-              <span key={cap} className="px-2 py-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded text-xs text-[#b0b0b0] font-mono">
-                {cap}
+      {/* Stack */}
+      {agent.stack && agent.stack.length > 0 && (
+        <div style={{ marginBottom: '32px' }}>
+          <h3 style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>Stack</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {agent.stack.map((s) => (
+              <span key={s} style={{
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: '11px',
+                color: '#00ff88',
+                background: 'rgba(0,255,136,0.07)',
+                border: '1px solid rgba(0,255,136,0.15)',
+                borderRadius: '3px',
+                padding: '4px 10px',
+              }}>
+                {s}
               </span>
             ))}
           </div>
         </div>
+      )}
 
-        <div className="flex gap-2 mb-6">
-          {(['overview', 'builds', 'commits'] as const).map((tab) => (
-            <button key={tab} onClick={() => setActiveTab(tab)} className={`px-4 py-2 rounded text-sm font-mono ${activeTab === tab ? 'bg-[#00ff88] text-black' : 'bg-[#1a1a1a] text-[#b0b0b0] hover:bg-[#2a2a2a]'}`}>
-              {tab}
-            </button>
-          ))}
+      {/* Capabilities */}
+      {agent.capabilities && agent.capabilities.length > 0 && (
+        <div style={{ marginBottom: '32px' }}>
+          <h3 style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>Capabilities</h3>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {agent.capabilities.map((cap) => (
+              <li key={cap} style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '12px', color: '#b0b0b0', padding: '4px 0', borderBottom: '1px solid #111' }}>
+                — {cap}
+              </li>
+            ))}
+          </ul>
         </div>
+      )}
 
-        {activeTab === 'overview' && (
-          <div className="bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Agent Overview</h2>
-            <div className="space-y-3 text-sm text-[#b0b0b0]">
-              <div className="flex justify-between">
-                <span className="text-[#777]">Joined</span>
-                <span>{new Date(agent.joinedAt).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#777]">Last Active</span>
-                <span>{agent.lastActive ? new Date(agent.lastActive).toLocaleString() : 'unknown'}</span>
-              </div>
-              {agent.onChainAddress && (
-                <div className="flex justify-between">
-                  <span className="text-[#777]">On-Chain Address</span>
-                  <span className="font-mono text-xs">{agent.onChainAddress}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+      {/* Wallet */}
+      {agent.wallet && (
+        <div style={{ marginBottom: '32px' }}>
+          <h3 style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>Wallet</h3>
+          <code style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '12px', color: '#4488ff' }}>
+            {agent.wallet}
+          </code>
+        </div>
+      )}
 
-        {activeTab === 'builds' && (
-          <div className="bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Build History</h2>
-            {agent.buildLog && agent.buildLog.length > 0 ? (
-              <div className="space-y-3">
-                {agent.buildLog.map((entry, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-[#1a1a1a] rounded border border-[#2a2a2a]">
-                    <span className={`text-xs font-mono px-2 py-0.5 rounded ${entry.result === 'success' ? 'bg-[#00ff88]/10 text-[#00ff88]' : entry.result === 'failure' ? 'bg-[#ff4444]/10 text-[#ff4444]' : 'bg-[#555]/10 text-[#777]'}`}>
-                      {entry.result}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm text-[#e8e8e8] truncate">{entry.detail}</div>
-                      <div className="text-xs text-[#555] mt-1">{entry.issue} · {new Date(entry.date).toLocaleString()}</div>
-                    </div>
-                  </div>
-                ))}
+      {/* Build log */}
+      {agent.buildLog && agent.buildLog.length > 0 && (
+        <div>
+          <h3 style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: '11px', color: '#555', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '12px' }}>Build Log</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {agent.buildLog.slice(0, 10).map((build) => (
+              <div key={build.number} style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '12px',
+                padding: '10px 14px',
+                background: '#0d0d0d',
+                border: '1px solid #1a1a1a',
+                borderRadius: '4px',
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: '11px',
+              }}>
+                <span style={{ color: '#555', minWidth: '28px' }}>#{build.number}</span>
+                <span style={{ color: BUILD_STATUS_COLOR[build.status] ?? '#555', minWidth: '60px' }}>{build.status}</span>
+                <span style={{ color: '#777', flex: 1 }}>{build.issue}</span>
+                {build.message && <span style={{ color: '#555' }}>{build.message}</span>}
+                <span style={{ color: '#333' }}>{new Date(build.timestamp).toLocaleDateString()}</span>
               </div>
-            ) : (
-              <p className="text-[#555] text-sm font-mono">no build history available</p>
-            )}
+            ))}
           </div>
-        )}
-
-        {activeTab === 'commits' && (
-          <div className="bg-[#0d0d0d] border border-[#1e1e1e] rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">Recent Commits</h2>
-            {agent.recentCommits && agent.recentCommits.length > 0 ? (
-              <div className="space-y-3">
-                {agent.recentCommits.map((commit) => (
-                  <div key={commit.sha} className="p-3 bg-[#1a1a1a] rounded border border-[#2a2a2a]">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="text-sm text-[#e8e8e8] flex-1">{commit.message}</div>
-                      <span className="font-mono text-xs text-[#555] shrink-0">{commit.sha.slice(0, 7)}</span>
-                    </div>
-                    <div className="text-xs text-[#555] mt-1">{new Date(commit.date).toLocaleString()}</div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[#555] text-sm font-mono">no recent commits found</p>
-            )}
-          </div>
-        )}
-      </main>
+        </div>
+      )}
     </div>
   );
 }
