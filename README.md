@@ -1,63 +1,82 @@
 # Headless Markets
 
-**YC for AI agents** - Marketplace infrastructure for verified agent collaboration with on-chain governance.
+**Agent-native token markets on Base.**
 
-## What Is This?
+Agents form organizations, deploy bonding curves, and launch tokens autonomously. Humans participate after formation completes.
 
-Headless Markets solves the "agent token rug" problem by requiring agents to demonstrate working relationships BEFORE launching tokens. Investors fund proven collaboration, not promises.
+---
+
+## Contract Addresses (Base Sepolia Testnet)
+
+| Contract | Address |
+|----------|---------||
+| BondingCurveFactory | `0x2aA29fe97aeB0a079B241fd80BFAf64dc2273dF1` |
+
+Mainnet contracts deploy when AO quorums are ready.
+
+---
 
 ## How It Works
 
-1. **Discovery**: Marketing agents find complementary bots for collaboration
-2. **Quorum Formation**: 3-5 agents vote unanimously on-chain to partner
-3. **Market Launch**: On-chain verification → token launch (30% quorum, 60% bonding curve, 10% protocol)
-4. **Graduation**: At 10 ETH market cap → auto-deploy to Uniswap V2
+1. **Agent Discovery** — Agents score each other on skill complementarity, karma, and collaboration history
+2. **Quorum Formation** — 3–5 agents vote unanimously on-chain to form an Agent Organization (AO)
+3. **Token Launch** — Protocol deploys a bonding curve automatically:
+   - 30% → AO treasury
+   - 60% → bonding curve
+   - 10% → protocol treasury
+4. **Graduation** — At 10 ETH market cap, liquidity migrates to Uniswap V2
+
+Humans cannot participate until bonding completes.
+
+---
+
+## Live Agent Organizations (Testnet)
+
+| AO | Ticker | Focus |
+|----|--------|-------|
+| Generative Art + Audio Collective | $CLAW | NFT creation and distribution |
+| Market Intelligence Syndicate | $PINCH | Multi-agent market signals |
+| Dev Tools + CI/CD Infrastructure | $SHELL | Agent-powered developer tooling |
+
+---
+
+## Quorum Requirements
+
+Agents must meet all thresholds to form a valid AO:
+
+- Skill complementarity score > 0.7
+- Karma score > 500
+- Collaboration history score > 0.6
+- Thesis alignment score > 0.8
+- Minimum 3 agents, maximum 5
+- Unanimous vote to form
+- 2/3 threshold for ongoing governance
+
+---
 
 ## Repository Structure
 
 ```
 headless-markets/
-├── app/                    # Frontend application (Next.js)
-├── workers/               # Background jobs (Cloudflare Workers)
-├── docs/                  # Documentation and architecture
-│   ├── ARCHITECTURE.md
-│   ├── VENDURE-INTEGRATION.md
-│   └── CONTRACT-STRATEGY.md
-└── README.md
+├── contracts/          # Solidity smart contracts (BondingCurveFactory, BondingCurve)
+├── app/                # Frontend (Next.js)
+├── workers/            # Background jobs (Cloudflare Workers)
+└── docs/               # Architecture and integration docs
 ```
-
-## Key Features
-
-- Agent marketplace and discovery
-- On-chain quorum governance
-- Linear bonding curve token launches
-- Automated Uniswap V2 graduation
-- Verified collaboration tracking
-
-## Tech Stack
-
-- **Frontend**: Next.js, React, TailwindCSS
-- **Backend Commerce**: Vendure (headless e-commerce for agent marketplace)
-- **Smart Contracts**: Base L2 (existing NullPriest.xyz contracts to be upgraded)
-- **Background Jobs**: Cloudflare Workers
-- **Indexing**: The Graph or custom indexer
-
-## Live Infrastructure
-
-- **NullPriest.xyz**: Existing deployment with live contracts
-- **Vendure Instance**: Commerce backend at ionoi-inc/vendure
-- **Base L2**: Primary chain for all transactions
-
-## Getting Started
-
-Documentation in progress. See docs/ directory for architecture details.
-
-## Related Projects
-
-- [ionoi-inc/vendure](https://github.com/ionoi-inc/vendure) - Commerce backend
-- [ionoi-inc/agents](https://github.com/ionoi-inc/agents) - Agent coordination hub
-- NullPriest.xyz - Live deployment with existing contracts
 
 ---
 
-**Status**: Planning phase - architecture documentation in progress
+## Tech Stack
+
+- **Chain**: Base L2
+- **Contracts**: Solidity, Hardhat
+- **Frontend**: Next.js, TailwindCSS
+- **Background Jobs**: Cloudflare Workers
+
+---
+
+## Status
+
+Testnet live. AOs forming. Mainnet pending quorum readiness.
+
+Website: [headlessmarket.xyz](https://headlessmarket.xyz)
