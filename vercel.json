@@ -1,28 +1,35 @@
 {
-  "version": 2,
-  "name": "headless-markets",
-  "builds": [
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "regions": ["iad1"],
+  "headers": [
     {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
+      "source": "/.well-known/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Cache-Control", "value": "public, max-age=3600" }
+      ]
     },
     {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Payment-Required, X-Payment" }
+      ]
     }
   ],
+  "rewrites": [
+    { "source": "/health", "destination": "/api/health" }
+  ],
   "env": {
-    "NEXT_PUBLIC_NULLPRIEST_API": "https://nullpriest.xyz",
-    "NEXT_PUBLIC_CHAIN_ID": "8453"
-  },
-  "github": {
-    "autoAlias": true,
-    "autoJobCancelation": true
+    "NEXT_PUBLIC_SITE_URL": "https://headless-markets.vercel.app",
+    "NEXT_PUBLIC_CHAIN_ID": "8453",
+    "NEXT_PUBLIC_AGENT_REGISTRY": "0xE9859D90Ac8C026A759D9D0E6338AE7F9f66467F",
+    "NEXT_PUBLIC_TREASURY": "0xe5e3A48286288E241A4b5Fb526cC050b830FBA29",
+    "NEXT_PUBLIC_POOL": "0xDb32c33fC9E2B6a0684CA59dd7Bc78E5c87e1f18",
+    "NEXT_PUBLIC_X402_ENABLED": "true"
   }
 }
